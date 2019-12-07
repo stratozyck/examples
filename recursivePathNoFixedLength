@@ -189,3 +189,136 @@
            
         return(hit);
     }
+    
+    
+    static int canPathInternalSubTiles(int start_x,int start_y,int end_x,int end_y,int moves_remaining,int caller_vector_position,tile_info *inTile,long society_id)
+{
+    int can_path =-1;
+    int x,y;
+    int vector=0;
+    int all_structures[9];
+    float stone_wall[9];
+    float wood_wall[9];
+    float general_wall[9];
+    setArray(general_wall,0,sizeof(float)*9)
+    if(inTile->stone_wall_level>0)
+    {
+        memcpy(general_wall,inTile->stone_wall,sizeof(float)*9);
+    }
+    else if(inTile->wood_wall_level>0)
+    {
+         memcpy(general_wall,inTile->wood_wall,sizeof(float)*9);
+    }
+    memcpy(all_structures,inTile->types_of_structures,sizeof(int)*9);
+    convertTileXYtoVector(end_x,end_y,&vector);
+    int plan[9];
+    float wall_value = general_wall[vector];
+    bool isGate = false;
+    if((all_structures[vector]==kTileGateStructure)||(all_structures[vector]==kTileWoodGateStructure)||(all_structures[vector]==kTileGateStructure2)||(all_structures[vector]==kTileWoodGateStructure2))//we check if the gate belongs to the player elsewhere?
+    {isGate=true;
+        if(inTile->society_id!=-1)
+            {
+                if((inTile->society_id!=society_id)||(society_id<0))
+                    {
+                        return(-1);
+                    }
+            }
+    
+    }
+    if((wall_value>=1)&&(isGate==false)){
+    #define fixsoon 1
+    return(-1);
+    }
+    if((start_x == end_x)&&(start_y == end_y))
+    {
+        return(1);
+    }
+    x = rand()%3;
+    y = rand()%3;
+    x--;
+    y--;
+            
+    int max_check = 8;
+    int current_vector =0;
+    convertTileXYtoVector(start_x,start_y,&current_vector);
+    int total_checked=0;
+    if(moves_remaining==0)
+    {
+        return(-1);
+    }
+    
+    while(total_checked<=max_check)
+        {
+            int target_y = start_y+y;
+            
+            while((x<=1)&&(total_checked<=max_check))//again, this could be redone, code was setup differently at first, but if it works it works
+            {
+                int vector=0;
+                int target_x = start_x+x;
+                if((x==0)&&(y==0))
+                {
+                
+                }
+                else{
+                    if((target_x<=2) &&(target_x>=0) &&(target_y<=2) &&(target_y>=0))
+                    {
+                    
+                        convertTileXYtoVector(target_x,target_y,&vector);
+                        int can_path2=0;
+                        isGate = false;
+                        bool owns_gate=true;
+                        int test = all_structures[vector];
+                        if((all_structures[vector]==kTileGateStructure)||(all_structures[vector]==kTileWoodGateStructure)||(all_structures[vector]==kTileWoodGateStructure2)||(all_structures[vector]==kTileGateStructure2))//we check if the gate belongs to the player elsewhere?
+                        {isGate=true;
+                            if(inTile->society_id!=-1)
+                            {
+                                if((inTile->society_id!=society_id)||(society_id<0))
+                                {
+                                    owns_gate=false;
+                                }
+                            }
+                        }
+                        if(target_x==1)
+                        {
+                        convertTileXYtoVector(target_x,target_y,&vector);;
+                        }
+                        if((target_x==2)&&(target_y==2))
+                        {
+                        ;
+                        }
+                        if(((general_wall[vector]<1)||(isGate))&&(owns_gate))
+                        {
+                        if(caller_vector_position>-1)
+                        {
+                            if(caller_vector_position!=vector)
+                            {
+                                can_path2=canPathInternalSubTiles(target_x,target_y,end_x,end_y,moves_remaining-1,current_vector,inTile,society_id);
+                            }
+                        }
+                        else {can_path2=canPathInternalSubTiles(target_x,target_y,end_x,end_y,moves_remaining-1,current_vector,inTile,society_id);}
+                        }
+                          
+                        if(can_path2>0)
+                        {
+                            return(can_path2);
+                        }
+                        else
+                        {
+                        ;
+                        }
+                        
+                    }
+                
+                }
+                skip:
+                x++;
+                total_checked++;
+                
+            }
+            y++;
+            if(y>1){y=-1;}
+            if(x>1){x=-1;}
+        }
+
+    return(can_path);
+}
