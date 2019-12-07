@@ -1,0 +1,191 @@
+	-(int)recursivePathNoFixedLength:(tile_info ***)inPreAllocatedBlankPath andPosition:(int)inPos andMovePointsRemaining:(float)inMovePointsRemaining andIgnoreFog:(int)inFog andTile:(tile_info *)inTile andDestination:(tile_info *)toTile andPlayer:(NPC*)inPlayer andCaller:(tile_info*)caller andExclusionSet:(tile_info**)inExclusionSet andIsSub:(int) isSub andCurrentPositionOnTile:(char *)position_on_tile andEndPosition: (char**) end_position desiredEndPosition: (char*)desired_end_position
+    {
+        if(inTile==nil){return 0;}
+        self->recursion_calls++;
+        long from_x = inTile->x_pos;
+		long from_y = inTile->y_pos;
+        //inPlayer is used for tile ownership only
+        long exclusion_set_size=0;
+        if(inExclusionSet!=nil)
+        {
+            int x88=0;
+            while(inExclusionSet[x88]!=nil) //null terminated
+            {
+                exclusion_set_size++;
+                x88++;
+            }
+        }
+		
+		long to_x = toTile->x_pos;
+		long to_y = toTile->y_pos;
+        
+		int hit = 0;
+		if(caller==nil)
+        {
+            int local_y = 0;
+            while(local_y <map_y)//map_y is a method variable
+            {
+                int local_x = 0;
+                while(local_x<map_x) //map_x is a method variable
+                {
+                    [self setPathMapInt:local_x andY:local_y andValue:-1]; //the object has one copy of a dynamically sized matrix that is reset with each path find that serves to speed up pathfinding
+                    local_x++;
+                }
+                local_y++;
+            }
+        }
+		
+		if((to_x==from_x)&&(to_y==from_y)&&(inMovePointsRemaining>=0))
+		{
+            bool can_reach_sub_tile=true;
+            if(desired_end_position!=nil)
+            {
+                int internal_moves_allowed = 3;
+                int onSubTile_x=0;
+                int onSubTile_y = 0;
+                int society_id =-1;
+                int internal_end_x=0;
+                int internal_end_y=0;
+                if(inPlayer!=nil){society_id = inPlayer->society_id;}
+                getSubTileCoordsFromPosition(position_on_tile,&onSubTile_x,&onSubTile_y);//desired_end_position
+                getSubTileCoordsFromPosition(desired_end_position,&internal_end_x,&internal_end_y);//desired_end_position
+                int can_path_internal = canPathInternalSubTiles(onSubTile_x,onSubTile_y,internal_end_x, internal_end_y,internal_moves_allowed,-1,inTile,society_id);
+                if(can_path_internal==0)
+                {
+                    can_reach_sub_tile=false;
+                }
+            
+            }//one final check - can we reach that subtile?
+            if(can_reach_sub_tile==false)
+            {
+                return(0);
+            }
+            if((*inPreAllocatedBlankPath)==nil)
+            {
+                (*inPreAllocatedBlankPath) = malloc(sizeof(tile_info *) * (inPos +4));//I allocated extra space for some reason
+                memset((*inPreAllocatedBlankPath),0,sizeof(tile_info *) * (inPos +4));
+            }
+            else
+            {
+                (*inPreAllocatedBlankPath)=realloc((*inPreAllocatedBlankPath),sizeof(tile_info *) * (inPos +4));
+            }
+            (*inPreAllocatedBlankPath)[inPos]=inTile;
+            (*inPreAllocatedBlankPath)[inPos+1]=nil;
+            if( (*end_position)!=nil)
+            {
+                memcpy((*end_position),position_on_tile,sizeof(char)*3);
+            }
+            return(1);
+            
+		}
+        if(inMovePointsRemaining<0)
+        {
+            return(0);
+        }
+	
+		if(inMovePointsRemaining<kmin_move_cost)
+		{
+			return(0);
+		}
+            int x,y;
+            x = arc4random_uniform(3)-1;//will get a -1 0 1
+            y = arc4random_uniform(3)-1; //  -1 0 1
+
+            int max_check = 8;
+            int total_checked=0;
+			
+			while(total_checked<=max_check)
+            {
+                int target_y = inTile->y_pos +y;
+                while((x<=1)&&(total_checked<=max_check))//i was really lazy, but this was changed from a prior setup
+                {
+                    int target_x = inTile->x_pos+x;
+                    tile_info* next_tile= getTileFromTileGivenXY(inTile,target_x,target_y); //tile static function, all the tiles have              
+
+                    if((inExclusionSet!=nil)&&(next_tile!=nil)) //ok now need to check if tile is in exclusion set
+                    {
+                      int on_path = is_on_path(inExclusionSet,next_tile,exclusion_set_size);
+                    if(on_path ==1){next_tile=nil;}//exclusion sets are usually nil, but were added to exclude certain tiles that the player may not be able to move on even if it could otherwise (for instance, game rule)
+                    }
+                    if(next_tile==caller){next_tile=nil;}//blanks out caller
+                    
+                       if(next_tile!=nil) //valid tile
+                            {
+                                
+								if((x==0)&&(y==0)) //is caller, ignore
+								{
+                                    ;
+								}
+								else // is not caller
+								{
+                                    
+                                    bool can_path = canPathSPC(inPlayer,next_tile);//allows nil
+
+                                    unsigned char visibility1=_visible_;
+                                    if(inPlayer!=nil)
+                                    {
+                                        visibility1=getVisibility(inPlayer,next_tile->x_pos,next_tile->y_pos);
+                                    }
+                                
+                                    if( ((inFog==fog_require_visible) &&(visibility1!=_visible_))==false)
+                                    {// I believe inFog==2 means has to be visible
+
+									if((next_tile->terrain_type !=kMTN)&&(next_tile->terrain_type!=kWATER)&& ( (visibility1!=_black_) ||(inFog==fog_include_black)) &&(can_path) )
+                                    {
+                                        float tile_move_cost = next_tile->movement_cost;
+                                        
+                                         tile_move_cost=returnMoveCostOfTileSpecificToPlayer(next_tile,inPlayer,isSub);//have to look up how much the move cost is specific to the player's owner
+                                         
+                                        float new_move_remaining = (inMovePointsRemaining-tile_move_cost);
+                                        if(new_move_remaining>=0)
+                                        {
+                                            char local_position_on_tile[3];//previous subtile
+                                            memcpy(local_position_on_tile,position_on_tile,sizeof(char)*3);
+                                            char new_position_on_next_potential_tile[3];
+                                            memset(new_position_on_next_potential_tile,0,sizeof(char)*3);//will hold next
+                                            int can_move = [self canPath:inPlayer andTile:next_tile andSubNPC:nil andPositionOnTileUsedForRecursionOnly:local_position_on_tile andOnTile:inTile];//believes allow nil now
+                                           if(can_move>-1)
+                                            {
+                                                int tile_history = 0;
+                                                tile_history = [self getPathMapInt:target_x andY:target_y];
+                                                if( tile_history== -1)
+                                                {
+                                                    [self setPathMapInt:target_x andY:target_y andValue:inMovePointsRemaining];
+                                                }
+                                                else if ( tile_history < inMovePointsRemaining)
+                                                {
+                                                    [self setPathMapInt:target_x andY:target_y andValue:inMovePointsRemaining];
+                                                }
+                                                else if ( tile_history >= inMovePointsRemaining)
+                                                {
+                                                    next_tile=nil;
+                                                }
+                                                if(next_tile!=nil)//make sure that we haven't been here before quicker
+                                                {
+                                                    getSubTilePositionFromVectorPosition(can_move,new_position_on_next_potential_tile);//convert the char to a numberical via static switch statements
+                                                    hit = [self recursivePathNoFixedLength:inPreAllocatedBlankPath andPosition:(inPos+1) andMovePointsRemaining:new_move_remaining andIgnoreFog:inFog andTile:next_tile andDestination:toTile andPlayer:inPlayer andCaller:inTile andExclusionSet:nil andIsSub:isSub andCurrentPositionOnTile:new_position_on_next_potential_tile andEndPosition:end_position desiredEndPosition:nil];//believe allows nil now
+                                                }
+                                            }
+                                        }
+                                        if(hit==1)//got it, lets stop this recursion
+                                        {
+
+                                            (*inPreAllocatedBlankPath)[inPos]=inTile; //records the path as it goes along
+                                            
+                                            return(hit);
+                                        }
+                                    }
+                                    }
+                                }
+                            }//valid tile if statement block
+                    skip:
+                    x++;
+                    total_checked++;
+                }
+			y++;
+            if(y>=2){y=-1;}
+            if(x>=2){x=-1;}
+			}
+           
+        return(hit);
+    }
