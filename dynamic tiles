@@ -1,0 +1,34 @@
+void setTileDynamic(tile_info* inTile ,int inX, int inY, int map_x, int map_y,tile_info **dynamic_tile_index)
+{
+    if(inY<0){return;}
+     if(inX<0){return;}
+    if(inX>=map_x){return;}
+    if(inY>=map_y){return;}
+    int offset = inX*map_y + inY;
+    *(dynamic_tile_index + offset)=inTile;
+}
+
+tile_info * getTileDynamic(tile_info* inTile ,int inX, int inY, int map_x, int map_y,tile_info **dynamic_tile_index)
+{
+    tile_info *outTile = NULL;
+    if(inY<0){return(NULL);}
+    if(inX<0){return(NULL);}
+    if(inX>=map_x){return(NULL);}
+    if(inY>=map_y){return(NULL);}
+    int offset = inX*map_y + inY;
+    outTile = *(dynamic_tile_index + offset);
+    return(outTile);
+}
+
+/*Usage
+tile_info is a struct that contains map tile info. It can be replaced with any struct pointer
+
+tile_info **new_dynamic_tile_index = malloc(sizeof(tile_info*)*total_cells);
+
+This approach is good for creating map sizes that are unknown at compile time.
+
+NOTE: because my game can read in mod files, I use a cautious approach for handling out of bounds issues. I can't guarantee a user won't mess with the 
+mod files, so I would rather the game handle it gracefully without crashing rather than crash, but in your testing you might want to crash/ASSERT it to be
+aware of out of bounds errors 
+
+*/
