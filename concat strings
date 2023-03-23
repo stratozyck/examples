@@ -1,0 +1,39 @@
+static char* concat1(int count, ...)
+{
+    va_list ap;
+    int i;
+    // Find required length to store merged string
+    int len = 1; // room for NULL
+    va_start(ap, count);
+    for(i=0 ; i<count ; i++)
+        len += strlen(va_arg(ap, char*));
+    va_end(ap);
+
+    // Allocate memory to concat strings
+    char *merged = calloc(sizeof(char),len);
+    int null_pos = 0;
+
+    // Actually concatenate strings
+    va_start(ap, count);
+    for(i=0 ; i<count ; i++)
+    {
+        char *s = va_arg(ap, char*);
+        strcpy(merged+null_pos, s);
+        null_pos += strlen(s);
+    }
+    va_end(ap);
+
+    return merged;
+}
+
+/*usage example */
+
+char *state_name = getPeopleName(inPlayer);
+out_string = concat1(5,inPlayer->player_first_name," ",inPlayer->player_name," of the ",state_name);
+
+
+/* HOWEVER that really works well when you have unknown # of strings, for known I'd suggest below when you know*/
+
+size_t needed = snprintf(NULL, 0, "%s | %s", string1, string2) + 1;
+char *combined = malloc(needed);
+sprintf(combined,  "%s | %s", string1, string2);
