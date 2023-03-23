@@ -1,0 +1,47 @@
+static float logistic_function(int count, ...)/*format is coefficient,value,coefficient,value, out put <0 is an error */
+{    
+    va_list ap;
+    float out_probability=0;//-1 is error
+    
+    if( (count % 2)!=0)
+    {
+        return(-1);
+    }
+    
+    va_start(ap, count);
+    
+    double coefficient=0,value=0,expectation=0;
+    for(int i=0 ; i<count ; i++)
+    {
+        float next_value= va_arg(ap, double);
+        if( (i % 2)==0)
+        {
+            coefficient=next_value;
+        }
+        else
+        {
+            value=next_value;
+            expectation+=coefficient*value;
+        }
+    }
+    va_end(ap);
+    float f_of_x = exp(-1*expectation);
+    out_probability = (double)1/( (double)1 + f_of_x);
+    return (out_probability);
+}
+
+/* snippet of example usage, values were defined elsewhere
+multipler is your precsision. You can use whatever value you want and the precision is 1/multiplier
+*/
+
+ int multiplier = 10000;
+
+float probability_birth = logistic_function(6,current_birth_rate, coefficient_current_rate,intercept,coefficient_intercept, coefficient_utility_per_popultion,utility_per_population);
+        int probability_birth_int = round(probability_birth*(float)multiplier);
+        int pick = arc4random_uniform(multiplier);
+        if(pick<probability_birth_int)
+        {
+            current_sim_births++;
+        }
+        
+      
