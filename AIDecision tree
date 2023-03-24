@@ -1,0 +1,58 @@
+## this is an example of a behavior tree I read in from a text file. This is "infantry AI" Higher priorities get executed if 
+## the condition holds. The parser is not case sensitive but I fell into a habit of capitalizing here.
+## note that the highest priority nodes call other decision trees (defense and offense) if there is contact with the enemy.
+## if no contact, it does the other lower priority stuff
+## I recommend having the lowest priority one always be a random move
+
+BEGIN_MOVEMENT
+PRIORITY 1
+CONDITION 
+NO_CONTACT -1 VISIBLE GREY ARMIES VILLAGES SUBS
+END 
+MOVE RANDOM
+END_MOVEMENT
+
+BEGIN_MOVEMENT
+PRIORITY 2
+CONDITION 
+SPOT_TERRITORY_OR_BORDER (_ENEMY_,8,visible)
+END 
+MOVE RETAIN
+END_MOVEMENT
+
+BEGIN_MOVEMENT
+PRIORITY 2
+CONDITION 
+SPOT_VILLAGE (_ENEMY_,8)
+END 
+MOVE RETAIN
+END_MOVEMENT
+
+BEGIN_MOVEMENT
+PRIORITY 3
+CONDITION 
+SPOT_ARMY (_ENEMY_) 
+END 
+MOVE RETAIN
+END_MOVEMENT
+
+
+BEGIN_MOVEMENT
+PRIORITY 3.5
+CONDITION 
+BALANCE_OF_FORCES (0,.75,4,VISIBLE)
+END 
+CALL (infantry_attack)
+END_MOVEMENT
+
+BEGIN_MOVEMENT
+PRIORITY 4
+CONDITION 
+BALANCE_OF_FORCES (.75,max,4,VISIBLE) ## it is > not >=
+END 
+CALL (infantry_defense)
+END_MOVEMENT
+
+
+
+
